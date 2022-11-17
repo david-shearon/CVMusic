@@ -1,8 +1,10 @@
 import cv2
 import numpy as np
 import sys
-import playMusic
+from playMusic import play_music
 
+#testing music functionality
+play_music([['C4', 2], ['E4', 4], ['F5', 1], ['A3', 2]], "test", 120)
 
 mouse_list = []
 x = 0
