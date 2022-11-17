@@ -10,7 +10,36 @@ def play_music(note_arr, output_name, tempo):
     midi_compiler.addTrackName(0, 0, output_name)
 
     # for each note in the array, turn note string into a midi note object
-    # will need to translate the note value into a frequency - use a mapping
+    # will need to translate the note value into a tone - use a mapping
+    # C4 starts at pitch 60, and adjacent notes increase pitch by 1. We aren't worried about sharps/flats
+    note_pitch_map = {
+          'C': 60,
+          'D': 62,
+          'E': 64,
+          'F': 65,
+          'G': 67,
+          'A': 69,
+          'B': 71
+    }
+
+    for note_idx in range(len(note_arr)):
+        note_pair = note_arr[note_idx]
+        note_letter = note_pair[0][0]   # ex: 'C'
+        note_octave = int(note_pair[0][1])   # ex: 4
+        # using octave, compare to the 4th octave notes defined in the map
+        tone_value = note_pitch_map[note_letter] + (12 * (note_octave - 4))
+        note_duration = 4 * (1 / note_pair[1])  # 4 beats in a whole note
+        # add current note to midi object
+        midi_compiler.addNote(0, 0, tone_value, note_idx, note_duration, volume=100)
+
+    # ready to write to file
+    output_stream = open(output_name + ".mid", 'w')
+    midi_compiler.writeFile(output_stream)
+
+
+
+
+"""
     note_frequency_map = {
          'C0': 16.35,
          'D0': 18.35,
@@ -76,17 +105,6 @@ def play_music(note_arr, output_name, tempo):
          'A8': 7040.00,
          'B8': 7902.13,
     }
-
-
-    for note_idx in range(len(note_arr)):
-        note_pair = note_arr[note_idx]
-        note_value = note_pair[0]
-        note_duration = 4 * (1 / note_pair[1])  # 4 beats in a whole note
-        freq_value = note_frequency_map[note_value]
-        midi_compiler.addNote(0, 0, note_value, note_idx, note_duration, volume=100)
-
-    # ready to write to file
-    output_stream = open(output_name + ".mid", 'w')
-    midi_compiler.writeFile(output_stream)
+"""
 
         
