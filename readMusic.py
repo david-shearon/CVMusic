@@ -56,6 +56,11 @@ cv2.waitKey(0)
 
 
 # edge detection from lab 10
+# note: we very well may want to threshold our values and turn them into a binary image
+# this will allow us to perform dilation, which will make our staff lines much thicker before blurring.
+# We also may not actually want to blur as our image is not very graphically complex
+# another note: we should only draw horizontal(ish) lines. Not going to be perfect, but let's not have any vertical lines
+# messing up our staff categorization
 MAX_WIDTH = 600
 SIGMA_BLUR = 1.0
 MIN_HOUGH_VOTES_FRACTION = np.array((0.1, 0.1, 0.1))
