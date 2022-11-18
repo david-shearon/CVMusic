@@ -1,10 +1,10 @@
 import cv2
 import numpy as np
 import sys
-from playMusic import play_music
+from playMusic import save_music
 
 #testing music functionality
-play_music([['C4', 2], ['E4', 4], ['F5', 1], ['A3', 2]], "test", 120)
+save_music([['C4', 2], ['E4', 4], ['F5', 1], ['A3', 2]], "test", 120)
 
 mouse_list = []
 x = 0
