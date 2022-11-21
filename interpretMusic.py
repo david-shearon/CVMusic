@@ -105,6 +105,6 @@ lines_image = raw_image.copy()
 for line in houghLines:
     cv2.line(lines_image, line[0], line[1], (0, 0, 255), thickness=1, lineType=cv2.LINE_AA)
 
-#cv2.imshow("Hough Lines", lines_image)
+
 cv2.imwrite("./test_images/detected_lines.jpg", lines_image)
 cv2.waitKey(0)
