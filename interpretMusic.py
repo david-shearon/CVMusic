@@ -96,13 +96,43 @@ houghLines = cv2.HoughLinesP(
     maxLineGap=int(edge_image.shape[1] * MAX_LINE_GAP_FRACTION)
 ).squeeze().reshape(-1, 2, 2) # squeeze to remove unneccesary extra dimensions in the list, then reshape to put each endpoint in it's own array
 
-print(len(houghLines))
+def euclid_distance(line_one, line_two):
+    return np.sqrt(np.sum((line_one - line_two) ** 2, axis=0))
 
-# NOTE: need a way to merge similar Hough lines, as the edge detector will output two on average for every staff line
+# Merges all lines that are within a range of each other
+SIMILARITY_THRESH = 3
+cleaned_lines = np.empty((0,2,2), np.int32)
+while 0 < len(houghLines):
+    # Finds all lines that are similar to the current line and removes them from the list
+    same_lines = np.empty((0,2,2))
+    curr_line = houghLines[0]
+    houghLines = np.delete(houghLines, 0, axis=0)
+    for i, line in enumerate(houghLines):
+        # Test if the euclidian distance between corresponding endpoints is less than the threshold and add to same_lines if so
+        if (euclid_distance(curr_line, line) < SIMILARITY_THRESH).all():
+            houghLines = np.delete(houghLines, i - same_lines.shape[0], axis=0)
+            same_lines = np.vstack((same_lines, line.reshape((-1, 2, 2))))
+    
+    # Calculate the average of the similar lines and add to cleaned_lines
+    new_line = np.int32((curr_line + np.sum(same_lines, axis=0)) / (same_lines.shape[0] + 1))
+    cleaned_lines = np.vstack((cleaned_lines, new_line.reshape((-1, 2, 2))))
+
+# Group the lines into staffs
+line_groups = np.zeros((cleaned_lines.shape[0], 5), dtype=np.int32)
+for i, curr_line in enumerate(cleaned_lines):
+    # Create an array of tuples with the index of the line and the euclidean distance from the target line
+    dists = np.array([
+        (j, np.sum(euclid_distance(curr_line, line)) / 2) for j, line in enumerate(cleaned_lines)
+        ],
+        dtype=[("ind", int), ("val", float)])
+    line_groups[i] = np.array([i for i, _ in np.sort(dists, order="val")[:5]])      # Sort the distances and take the 5 smallest, store in line_groups
+
+# Forces all the groups to be unique, finding the different staffs
+staff_groups = np.array([cleaned_lines[group] for group in np.unique(np.sort(line_groups), axis=0)])
 
 # print the detected lines from the hough transform
 lines_image = raw_image.copy()
-for line in houghLines:
+for line in cleaned_lines:
     cv2.line(lines_image, line[0], line[1], (0, 0, 255), thickness=1, lineType=cv2.LINE_AA)
 
 #cv2.imshow("Hough Lines", lines_image)
