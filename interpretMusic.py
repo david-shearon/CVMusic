@@ -1,3 +1,5 @@
+import math
+
 import cv2
 import numpy as np
 
@@ -138,3 +140,19 @@ for line in cleaned_lines:
 
 cv2.imwrite("./test_images/detected_lines.jpg", lines_image)
 cv2.waitKey(0)
+
+def scale_template_images(top_line, bottom_line, template_images):
+    # Input: the y position of the top line of any scale, the y position of the bottom line of the same scale,
+    # and an array of note images to be used for template matching
+    # Output: array of scaled template images to be actually used in template matching, ordered the same as before
+    scale_height = top_line - bottom_line
+    # we know from the size of the scale how big a note should be approximately - 1/4 of the scale's height
+    note_height = math.ceil(scale_height / 4)
+    scaled_images = []
+    for image in template_images:
+        width_height_ratio = len(image[0]) / len(image)
+        new_height = note_height * width_height_ratio
+        scaled_image = cv2.resize(image, (new_height, note_height), interpolation=cv2.INTER_LINEAR)
+        scaled_images.append(scaled_image)
+
+    return scaled_images
