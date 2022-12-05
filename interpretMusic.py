@@ -3,6 +3,25 @@ import math
 import cv2
 import numpy as np
 
+def getNoteLetter(top_line, bottom_line, x, y):
+    notes_list = ['E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F']
+
+    up_left = top_line[0]
+    up_right = top_line[1]
+
+    down_left = bottom_line[0]
+    down_right = bottom_line[1]
+
+    slope = float(up_left[1] - up_right[1]) / float(up_left[0] - up_right[0])
+
+    upper_y = up_left[1] - slope * (x - up_left[0])
+    lower_y = down_left[1] - slope * (x - down_left[0])
+
+    note_index = np.round(float(y - lower_y) * 9 / float(upper_y - lower_y) - 1)
+
+    return notes_list[note_index]
+
+
 SIGMA_BLUR = 1.0
 # adjustable parameters to fine tune the edge detector
 MIN_EDGES_FRACTION = 0.04
@@ -134,8 +153,20 @@ staff_groups = np.array([cleaned_lines[group] for group in np.unique(np.sort(lin
 
 # print the detected lines from the hough transform
 lines_image = raw_image.copy()
-for line in cleaned_lines:
-    cv2.line(lines_image, line[0], line[1], (0, 0, 255), thickness=1, lineType=cv2.LINE_AA)
+
+def myFunc(e):
+    return float(e[0][1] + e[1][1])/2
+
+cleaned_lines_list = list(cleaned_lines)
+cleaned_lines_list = sorted(cleaned_lines_list, key=myFunc)
+
+for line_count in range(len(cleaned_lines_list)):
+    if(line_count % 5 == 0):
+        cv2.line(lines_image, cleaned_lines_list[line_count][0], cleaned_lines_list[line_count][1], (0, 0, 255), thickness=1, lineType=cv2.LINE_AA)
+        cv2.line(lines_image, cleaned_lines_list[line_count + 4][0], cleaned_lines_list[line_count + 4][1], (0, 255, 0), thickness=1, lineType=cv2.LINE_AA)
+        print(getNoteLetter(cleaned_lines_list[line_count], cleaned_lines_list[line_count + 4], 512, 237))
+        # cleaned_lines_list.remove(line)
+
 
 
 cv2.imwrite("./test_images/detected_lines.jpg", lines_image)
