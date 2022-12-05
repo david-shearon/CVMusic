@@ -122,18 +122,22 @@ while 0 < len(houghLines):
     new_line = np.int32((curr_line + np.sum(same_lines, axis=0)) / (same_lines.shape[0] + 1))
     cleaned_lines = np.vstack((cleaned_lines, new_line.reshape((-1, 2, 2))))
 
-# Group the lines into staffs
-line_groups = np.zeros((cleaned_lines.shape[0], 5), dtype=np.int32)
-for i, curr_line in enumerate(cleaned_lines):
-    # Create an array of tuples with the index of the line and the euclidean distance from the target line
+# Group the lines into staff bounding boxes
+line_groups = np.empty((0, 5), dtype=np.int32)
+staff_boxes = np.empty((0, 4, 2), dtype=np.int32)
+for curr_line in cleaned_lines:
+    # Create an array of tuples with the index, euclidean distance from the current line, and the y position of every line
     dists = np.array([
-        (j, np.sum(euclid_distance(curr_line, line)) / 2) for j, line in enumerate(cleaned_lines)
+        (i, np.mean(euclid_distance(curr_line, line)), np.mean(line[:, 1])) for i, line in enumerate(cleaned_lines)
         ],
-        dtype=[("ind", int), ("val", float)])
-    line_groups[i] = np.array([i for i, _ in np.sort(dists, order="val")[:5]])      # Sort the distances and take the 5 smallest, store in line_groups
+        dtype=[("i", int), ("dist", float), ("y", float)])
+    # Get the indexes of the 5 smallest euclidean distance lines, sorted by their y position
+    staff = np.array([i for i, _, _ in np.sort(np.sort(dists, order="dist")[:5], order="y")])
 
-# Forces all the groups to be unique, finding the different staffs
-staff_groups = np.array([cleaned_lines[group] for group in np.unique(np.sort(line_groups), axis=0)])
+    # If it is a new staff, store and get the bounding box
+    if staff not in line_groups:
+        line_groups = np.vstack((line_groups, staff))
+        staff_boxes = np.vstack((staff_boxes, cleaned_lines[staff[::4]].reshape(-1, 4, 2)))
 
 # print the detected lines from the hough transform
 lines_image = raw_image.copy()
