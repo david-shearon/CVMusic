@@ -1,7 +1,6 @@
-import math
-
 import cv2
 import numpy as np
+import os
 
 SIGMA_BLUR = 1.0
 # adjustable parameters to fine tune the edge detector
@@ -13,6 +12,10 @@ MIN_HOUGH_VOTES_FRACTION = 0.10
 MIN_LINE_LENGTH_FRACTION = 0.75
 # adjustable parameter to allow lines to be detected with discontinuities (up to this times the image width)
 MAX_LINE_GAP_FRACTION = 0.05
+
+# create a directory for the output images in this file if one doesn't exist
+if not os.path.exists("./test_images/"):
+    os.mkdir("./test_images/")
 
 # read in the raw image with the page of sheet music
 raw_image = cv2.imread("./images/5.jpg")
@@ -147,7 +150,7 @@ def scale_template_images(top_line, bottom_line, template_images):
     # Output: array of scaled template images to be actually used in template matching, ordered the same as before
     scale_height = top_line - bottom_line
     # we know from the size of the scale how big a note should be approximately - 1/4 of the scale's height
-    note_height = math.ceil(scale_height / 4)
+    note_height = np.ceil(scale_height / 4)
     scaled_images = []
     for image in template_images:
         width_height_ratio = len(image[0]) / len(image)
