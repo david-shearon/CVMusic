@@ -134,5 +134,4 @@ for i in range(min(NLINES, len(hough_lines))):
 #print(test)
 
 cv2.imwrite("edge" + str(count) + ".jpg", notes_image)
-cv2.imwrite("final" + str(count) + ".jpg", notes_image_original)
 count += 1
