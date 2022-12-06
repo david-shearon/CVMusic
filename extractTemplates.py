@@ -77,10 +77,38 @@ hlf_template_match_centroids = getTemplateMatchCentroids(hlf_template_matches, h
 
 lines_sorted, _, staff_boxes = interpretMusic.findLines("./images/5.jpg")
 
+# NOTE VALUE RECOGNITION
+final_song = []
+def horizontal_notes_sort_function(n):     # used for sorting notes within a staff horizontally
+    return n[0]
+
 for line_count in range(len(lines_sorted)):
     staff_line = int(line_count / 5)
     if(line_count % 5 == 0):
-        interpretMusic.getNoteLetter(lines_sorted[line_count][0], lines_sorted[line_count + 4], x, y)
+        top_line = lines_sorted[line_count][0]
+        bottom_line = lines_sorted[line_count + 4]
+        # For all notes we've detected, do their y positions reveal that they are positioned within this staff?
+        notes_in_staff = []
+        # quarter notes
+        for quarter_note in qtr_template_match_centroids:
+            note_y = quarter_note[1]
+            if (note_y < top_line[0][1] or note_y < top_line[1][1]) and (note_y > bottom_line[0][1] or note_y > bottom_line[1][1]):
+                # this note is within the bounds of the top and bottom lines of the staff
+                notes_in_staff.append(quarter_note)
+        # half notes
+        for half_note in hlf_template_match_centroids:
+            note_y = half_note[1]
+            if (note_y < top_line[0][1] or note_y < top_line[1][1]) and (note_y > bottom_line[0][1] or note_y > bottom_line[1][1]):
+                # this note is within the bounds of the top and bottom lines of the staff
+                notes_in_staff.append(half_note)
+
+        # sort by horizontal position using above function
+        notes_in_staff = sorted(notes_in_staff, key=horizontal_notes_sort_function)
+
+
+        for final_note in notes_in_staff:
+            note_letter = interpretMusic.getNoteLetter(top_line, bottom_line, final_note[0], final_note[1])
+            final_song.append(note_letter)
 
 cv2.imshow("img",raw_image)
 cv2.waitKey(0)

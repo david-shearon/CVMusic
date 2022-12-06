@@ -21,7 +21,7 @@ def getNoteLetter(top_line, bottom_line, x, y):
     return notes_list[note_index]
 
 # Function for the sorting of lines
-def sortFunction(e):
+def lines_sort_function(e):
     return float(e[0][1] + e[1][1])/2
 
 # For staff line grouping
@@ -169,7 +169,7 @@ def findLines(input_image_name:str):
 
     # sort the line array (staff lines) from top to bottom
     cleaned_lines_list = list(cleaned_lines)
-    cleaned_lines_list = sorted(cleaned_lines_list, key=sortFunction)
+    cleaned_lines_list = sorted(cleaned_lines_list, key=lines_sort_function)
 
     # Draw top/bottom lines
     for line_count in range(len(cleaned_lines_list)):
