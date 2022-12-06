@@ -74,7 +74,7 @@ print(len(qtr_template_matches) + len(hlf_template_matches))
 qtr_template_match_centroids = getTemplateMatchCentroids(qtr_template_matches, quarter_note_template_img)
 hlf_template_match_centroids = getTemplateMatchCentroids(hlf_template_matches, half_note_template_img)
 
-interpretMusic.findLines("./images/5.jpg")
+cleaned_lines_list, line_groups, staff_boxes = interpretMusic.findLines("./images/5.jpg")
 
 cv2.imshow("img",raw_image)
 cv2.waitKey(0)
