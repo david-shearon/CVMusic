@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import interpretMusic
+from playMusic import save_music
 
 # NOTE: BIG caveat with this approach is that currently it only robustly works with image 5,
 #       for the scope of this project I say we just get it working with image 5 and worry about
@@ -60,11 +61,13 @@ drawMatches(qtr_template_matches, quarter_note_template_img, raw_image, color=(0
 drawMatches(hlf_template_matches, half_note_template_img, raw_image, color=(0,255,0))
 
 def getTemplateMatchCentroids(matches, template):
+    centroids = []
     for match in matches:
         r = round(match[1])
         c = round(match[0])
         centroid = (c + template.shape[1]//2, r + template.shape[0]//2)
-        return centroid
+        centroids.append(centroid)
+    return centroids
 
 # print the total number of matches for cli debugging
 print(len(qtr_template_matches) + len(hlf_template_matches))
@@ -80,35 +83,44 @@ lines_sorted, _, staff_boxes = interpretMusic.findLines("./images/5.jpg")
 # NOTE VALUE RECOGNITION
 final_song = []
 def horizontal_notes_sort_function(n):     # used for sorting notes within a staff horizontally
-    return n[0]
+    return n[0][0]
 
 for line_count in range(len(lines_sorted)):
     staff_line = int(line_count / 5)
     if(line_count % 5 == 0):
-        top_line = lines_sorted[line_count][0]
+        top_line = lines_sorted[line_count]
         bottom_line = lines_sorted[line_count + 4]
         # For all notes we've detected, do their y positions reveal that they are positioned within this staff?
         notes_in_staff = []
         # quarter notes
         for quarter_note in qtr_template_match_centroids:
             note_y = quarter_note[1]
-            if (note_y < top_line[0][1] or note_y < top_line[1][1]) and (note_y > bottom_line[0][1] or note_y > bottom_line[1][1]):
+            if (note_y >= top_line[0][1] or note_y >= top_line[1][1]) and (note_y <= bottom_line[0][1] or note_y <= bottom_line[1][1]):
                 # this note is within the bounds of the top and bottom lines of the staff
-                notes_in_staff.append(quarter_note)
+                # have to store length information as well
+                notes_in_staff.append([quarter_note, 4])
         # half notes
         for half_note in hlf_template_match_centroids:
             note_y = half_note[1]
-            if (note_y < top_line[0][1] or note_y < top_line[1][1]) and (note_y > bottom_line[0][1] or note_y > bottom_line[1][1]):
+            if (note_y >= top_line[0][1] or note_y >= top_line[1][1]) and (note_y <= bottom_line[0][1] or note_y <= bottom_line[1][1]):
                 # this note is within the bounds of the top and bottom lines of the staff
-                notes_in_staff.append(half_note)
+                # have to store length information as well
+                notes_in_staff.append([half_note, 2])
 
         # sort by horizontal position using above function
         notes_in_staff = sorted(notes_in_staff, key=horizontal_notes_sort_function)
 
 
         for final_note in notes_in_staff:
-            note_letter = interpretMusic.getNoteLetter(top_line, bottom_line, final_note[0], final_note[1])
-            final_song.append(note_letter)
+            # find corresponding note letters, add to final song
+            note_letter = interpretMusic.getNoteLetter(top_line, bottom_line, final_note[0][0], final_note[0][1])
+            note_duration_fraction = final_note[1]
+            final_song.append([note_letter, note_duration_fraction])
+
+# we now have the entire song compiled
+print(final_song)
+
+save_music(final_song, "song", 100)
 
 cv2.imshow("img",raw_image)
 cv2.waitKey(0)

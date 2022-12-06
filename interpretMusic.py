@@ -4,7 +4,7 @@ import os
 
 # given the top and bottom lines of a staff, and the location of a note within those lines, return the letter of the note
 def getNoteLetter(top_line, bottom_line, x, y):
-    notes_list = ['E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F']
+    notes_list = ['E4', 'F4', 'G4', 'A4', 'B4', 'C5', 'D5', 'E5', 'F5']
 
     up_left = top_line[0]
     up_right = top_line[1]
