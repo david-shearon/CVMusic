@@ -1,7 +1,6 @@
-import math
-
 import cv2
 import numpy as np
+import os
 
 def getNoteLetter(top_line, bottom_line, x, y):
     notes_list = ['E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F']
@@ -31,6 +30,10 @@ MIN_HOUGH_VOTES_FRACTION = 0.10
 MIN_LINE_LENGTH_FRACTION = 0.75
 # adjustable parameter to allow lines to be detected with discontinuities (up to this times the image width)
 MAX_LINE_GAP_FRACTION = 0.05
+
+# create a directory for the output images in this file if one doesn't exist
+if not os.path.exists("./test_images/"):
+    os.mkdir("./test_images/")
 
 # read in the raw image with the page of sheet music
 raw_image = cv2.imread("./images/5.jpg")
@@ -137,18 +140,22 @@ while 0 < len(houghLines):
     new_line = np.int32((curr_line + np.sum(same_lines, axis=0)) / (same_lines.shape[0] + 1))
     cleaned_lines = np.vstack((cleaned_lines, new_line.reshape((-1, 2, 2))))
 
-# Group the lines into staffs
-line_groups = np.zeros((cleaned_lines.shape[0], 5), dtype=np.int32)
-for i, curr_line in enumerate(cleaned_lines):
-    # Create an array of tuples with the index of the line and the euclidean distance from the target line
+# Group the lines into staff bounding boxes
+line_groups = np.empty((0, 5), dtype=np.int32)
+staff_boxes = np.empty((0, 4, 2), dtype=np.int32)
+for curr_line in cleaned_lines:
+    # Create an array of tuples with the index, euclidean distance from the current line, and the y position of every line
     dists = np.array([
-        (j, np.sum(euclid_distance(curr_line, line)) / 2) for j, line in enumerate(cleaned_lines)
+        (i, np.mean(euclid_distance(curr_line, line)), np.mean(line[:, 1])) for i, line in enumerate(cleaned_lines)
         ],
-        dtype=[("ind", int), ("val", float)])
-    line_groups[i] = np.array([i for i, _ in np.sort(dists, order="val")[:5]])      # Sort the distances and take the 5 smallest, store in line_groups
+        dtype=[("i", int), ("dist", float), ("y", float)])
+    # Get the indexes of the 5 smallest euclidean distance lines, sorted by their y position
+    staff = np.array([i for i, _, _ in np.sort(np.sort(dists, order="dist")[:5], order="y")])
 
-# Forces all the groups to be unique, finding the different staffs
-staff_groups = np.array([cleaned_lines[group] for group in np.unique(np.sort(line_groups), axis=0)])
+    # If it is a new staff, store and get the bounding box
+    if staff not in line_groups:
+        line_groups = np.vstack((line_groups, staff))
+        staff_boxes = np.vstack((staff_boxes, cleaned_lines[staff[::4]].reshape(-1, 4, 2)))
 
 # print the detected lines from the hough transform
 lines_image = raw_image.copy()
@@ -217,7 +224,7 @@ def scale_template_images(top_line, bottom_line, template_images):
     # Output: array of scaled template images to be actually used in template matching, ordered the same as before
     scale_height = top_line - bottom_line
     # we know from the size of the scale how big a note should be approximately - 1/4 of the scale's height
-    note_height = math.ceil(scale_height / 4)
+    note_height = np.ceil(scale_height / 4)
     scaled_images = []
     for image in template_images:
         width_height_ratio = len(image[0]) / len(image)
