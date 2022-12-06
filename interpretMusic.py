@@ -17,8 +17,7 @@ def getNoteLetter(top_line, bottom_line, x, y):
     upper_y = up_left[1] - slope * (x - up_left[0])
     lower_y = down_left[1] - slope * (x - down_left[0])
 
-    note_index = np.round(float(y - lower_y) * 9 / float(upper_y - lower_y) - 1)
-
+    note_index = int(np.round(float(y - lower_y) * 9 / float(upper_y - lower_y)) - 1)
     return notes_list[note_index]
 
 
@@ -154,22 +153,62 @@ staff_groups = np.array([cleaned_lines[group] for group in np.unique(np.sort(lin
 # print the detected lines from the hough transform
 lines_image = raw_image.copy()
 
+# prepare binary image for quarter note detection
+# thresh, binary_img = cv2.threshold(raw_image.copy(), thresh=0, maxval=255, type=cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+_, close_image = cv2.threshold(raw_image.copy(), thresh=150, maxval=255, type=cv2.THRESH_BINARY)
+close_image = cv2.bitwise_not(close_image)
+
+kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
+close_image = cv2.morphologyEx(close_image, cv2.MORPH_OPEN, kernel)
+# close_image = cv2.morphologyEx(close_image, cv2.MORPH_CLOSE, kernel)
+
+# Find quarter note locations
+cv2.imshow("boxes", close_image)
+cv2.waitKey(0)
+num_labels, labels_img, stats, centroids = cv2.connectedComponentsWithStats(cv2.bitwise_not(close_image))
+for n in range(num_labels):
+    xc, yc = centroids[n]
+    area = stats[n, cv2.CC_STAT_AREA]
+    print("Region %d, centroid: (%f,%f), area = %d" % (n, xc, yc, area))
+
+bgr_image_display = cv2.cvtColor(close_image, cv2.COLOR_GRAY2BGR)
+for stat, centroid in zip(stats, centroids):
+    x0 = stat[cv2.CC_STAT_LEFT]
+    y0 = stat[cv2.CC_STAT_TOP]
+    w = stat[cv2.CC_STAT_WIDTH]
+    h = stat[cv2.CC_STAT_HEIGHT]
+    bgr_image_display = cv2.rectangle(
+        img=bgr_image_display, pt1=(x0, y0), pt2=(x0 + w, y0 + h),
+        color=(0, 0, 255), thickness=1)
+cv2.imshow("boxes", bgr_image_display)
+cv2.waitKey(0)
+
+
+
+
+# sort the line array from top to bottom
 def myFunc(e):
     return float(e[0][1] + e[1][1])/2
-
 cleaned_lines_list = list(cleaned_lines)
 cleaned_lines_list = sorted(cleaned_lines_list, key=myFunc)
 
+# Draw top/bottom lines
 for line_count in range(len(cleaned_lines_list)):
+    staff_line = int(line_count / 5)
     if(line_count % 5 == 0):
         cv2.line(lines_image, cleaned_lines_list[line_count][0], cleaned_lines_list[line_count][1], (0, 0, 255), thickness=1, lineType=cv2.LINE_AA)
         cv2.line(lines_image, cleaned_lines_list[line_count + 4][0], cleaned_lines_list[line_count + 4][1], (0, 255, 0), thickness=1, lineType=cv2.LINE_AA)
-        print(getNoteLetter(cleaned_lines_list[line_count], cleaned_lines_list[line_count + 4], 512, 237))
+
+        cv2.line(close_image, cleaned_lines_list[line_count][0], cleaned_lines_list[line_count][1], (0, 0, 255), thickness=1, lineType=cv2.LINE_AA)
+        cv2.line(close_image, cleaned_lines_list[line_count + 4][0], cleaned_lines_list[line_count + 4][1], (0, 255, 0), thickness=1, lineType=cv2.LINE_AA)
+        if(staff_line == 1):
+            print(getNoteLetter(cleaned_lines_list[line_count], cleaned_lines_list[line_count + 4], 223, 428))
         # cleaned_lines_list.remove(line)
 
 
 
 cv2.imwrite("./test_images/detected_lines.jpg", lines_image)
+cv2.imwrite("./test_images/lines_and_dots.jpg", close_image)
 cv2.waitKey(0)
 
 def scale_template_images(top_line, bottom_line, template_images):
