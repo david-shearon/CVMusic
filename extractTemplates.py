@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import interpretMusic
 
 # NOTE: BIG caveat with this approach is that currently it only robustly works with image 5,
 #       for the scope of this project I say we just get it working with image 5 and worry about
@@ -72,6 +73,8 @@ print(len(qtr_template_matches) + len(hlf_template_matches))
 #       determine horizontal order and pitch
 qtr_template_match_centroids = getTemplateMatchCentroids(qtr_template_matches, quarter_note_template_img)
 hlf_template_match_centroids = getTemplateMatchCentroids(hlf_template_matches, half_note_template_img)
+
+interpretMusic.findLines("./images/5.jpg")
 
 cv2.imshow("img",raw_image)
 cv2.waitKey(0)
