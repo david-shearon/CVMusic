@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 
+# given the top and bottom lines of a staff, and the location of a note within those lines, return the letter of the note
 def getNoteLetter(top_line, bottom_line, x, y):
     notes_list = ['E', 'F', 'G', 'A', 'B', 'C', 'D', 'E', 'F']
 
@@ -143,6 +144,10 @@ while 0 < len(houghLines):
 # Group the lines into staff bounding boxes
 line_groups = np.empty((0, 5), dtype=np.int32)
 staff_boxes = np.empty((0, 4, 2), dtype=np.int32)
+
+# print the detected lines from the hough transform
+lines_image = raw_image.copy()
+
 for curr_line in cleaned_lines:
     # Create an array of tuples with the index, euclidean distance from the current line, and the y position of every line
     dists = np.array([
@@ -156,44 +161,10 @@ for curr_line in cleaned_lines:
     if staff not in line_groups:
         line_groups = np.vstack((line_groups, staff))
         staff_boxes = np.vstack((staff_boxes, cleaned_lines[staff[::4]].reshape(-1, 4, 2)))
+        #Draw bounding box
+        lines_image = cv2.rectangle(img=lines_image, pt1=staff_boxes[-1][0], pt2=staff_boxes[-1][3], color=(0, 0, 255), thickness=4)
 
-# print the detected lines from the hough transform
-lines_image = raw_image.copy()
-
-# prepare binary image for quarter note detection
-# thresh, binary_img = cv2.threshold(raw_image.copy(), thresh=0, maxval=255, type=cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-_, close_image = cv2.threshold(raw_image.copy(), thresh=150, maxval=255, type=cv2.THRESH_BINARY)
-close_image = cv2.bitwise_not(close_image)
-
-kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-close_image = cv2.morphologyEx(close_image, cv2.MORPH_OPEN, kernel)
-# close_image = cv2.morphologyEx(close_image, cv2.MORPH_CLOSE, kernel)
-
-# Find quarter note locations
-cv2.imshow("boxes", close_image)
-cv2.waitKey(0)
-num_labels, labels_img, stats, centroids = cv2.connectedComponentsWithStats(cv2.bitwise_not(close_image))
-for n in range(num_labels):
-    xc, yc = centroids[n]
-    area = stats[n, cv2.CC_STAT_AREA]
-    print("Region %d, centroid: (%f,%f), area = %d" % (n, xc, yc, area))
-
-bgr_image_display = cv2.cvtColor(close_image, cv2.COLOR_GRAY2BGR)
-for stat, centroid in zip(stats, centroids):
-    x0 = stat[cv2.CC_STAT_LEFT]
-    y0 = stat[cv2.CC_STAT_TOP]
-    w = stat[cv2.CC_STAT_WIDTH]
-    h = stat[cv2.CC_STAT_HEIGHT]
-    bgr_image_display = cv2.rectangle(
-        img=bgr_image_display, pt1=(x0, y0), pt2=(x0 + w, y0 + h),
-        color=(0, 0, 255), thickness=1)
-cv2.imshow("boxes", bgr_image_display)
-cv2.waitKey(0)
-
-
-
-
-# sort the line array from top to bottom
+# sort the line array (staff lines) from top to bottom
 def myFunc(e):
     return float(e[0][1] + e[1][1])/2
 cleaned_lines_list = list(cleaned_lines)
@@ -203,19 +174,11 @@ cleaned_lines_list = sorted(cleaned_lines_list, key=myFunc)
 for line_count in range(len(cleaned_lines_list)):
     staff_line = int(line_count / 5)
     if(line_count % 5 == 0):
-        cv2.line(lines_image, cleaned_lines_list[line_count][0], cleaned_lines_list[line_count][1], (0, 0, 255), thickness=1, lineType=cv2.LINE_AA)
-        cv2.line(lines_image, cleaned_lines_list[line_count + 4][0], cleaned_lines_list[line_count + 4][1], (0, 255, 0), thickness=1, lineType=cv2.LINE_AA)
-
-        cv2.line(close_image, cleaned_lines_list[line_count][0], cleaned_lines_list[line_count][1], (0, 0, 255), thickness=1, lineType=cv2.LINE_AA)
-        cv2.line(close_image, cleaned_lines_list[line_count + 4][0], cleaned_lines_list[line_count + 4][1], (0, 255, 0), thickness=1, lineType=cv2.LINE_AA)
-        if(staff_line == 1):
-            print(getNoteLetter(cleaned_lines_list[line_count], cleaned_lines_list[line_count + 4], 223, 428))
-        # cleaned_lines_list.remove(line)
-
+        cv2.line(lines_image, cleaned_lines_list[line_count][0], cleaned_lines_list[line_count][1], (255, 0, 0), thickness=2, lineType=cv2.LINE_AA)
+        cv2.line(lines_image, cleaned_lines_list[line_count + 4][0], cleaned_lines_list[line_count + 4][1], (0, 255, 0), thickness=2, lineType=cv2.LINE_AA)
 
 
 cv2.imwrite("./test_images/detected_lines.jpg", lines_image)
-cv2.imwrite("./test_images/lines_and_dots.jpg", close_image)
 cv2.waitKey(0)
 
 def scale_template_images(top_line, bottom_line, template_images):
