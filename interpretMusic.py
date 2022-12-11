@@ -33,13 +33,13 @@ def findLines(input_image_name:str):
     SIGMA_BLUR = 1.0
     # adjustable parameters to fine tune the edge detector
     MIN_EDGES_FRACTION = 0.04
-    MAX_EDGES_FRACTION = 0.05
+    MAX_EDGES_FRACTION = 0.06
     # kind of a throwaway parameter, with the below, the only lines detected are the staff lines
     MIN_HOUGH_VOTES_FRACTION = 0.10
     # only look for really long continuous lines (really reliably picks out the staff lines and nothing else)
     MIN_LINE_LENGTH_FRACTION = 0.75
     # adjustable parameter to allow lines to be detected with discontinuities (up to this times the image width)
-    MAX_LINE_GAP_FRACTION = 0.05
+    MAX_LINE_GAP_FRACTION = 0.02
 
     # create a directory for the output images in this file if one doesn't exist
     if not os.path.exists("./test_images/"):
@@ -65,9 +65,9 @@ def findLines(input_image_name:str):
 
     # threshold the image to isolate the page of music
     # - assuming a white background of the music, it should stand out clearly from the background
-    _, thresh_image = cv2.threshold(gray_image,0,255,cv2.THRESH_BINARY_INV + cv2.THRESH_TRIANGLE)
+    _, thresh_image = cv2.threshold(gray_image,250,255,cv2.THRESH_BINARY_INV + cv2.THRESH_BINARY)
 
-    # create a simple kernel that is a rectangle 0.1% the width of the image
+    # create a simple kernel that is a square 0.1% the width of the image
     kernelSize = int(max((2, 0.001*thresh_image.shape[1])))
     kernelShape = (kernelSize,kernelSize)
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, kernelShape)
@@ -94,6 +94,7 @@ def findLines(input_image_name:str):
         L2gradient=True  # use more accurate L2 norm
     )
 
+    print("Test1")
     while np.sum(edge_image)/255 < MIN_EDGES_FRACTION * (raw_image_width * raw_image_height):
         thresh_canny *= 0.9
         edge_image = cv2.Canny(
@@ -103,6 +104,10 @@ def findLines(input_image_name:str):
             threshold2=3*thresh_canny,  # upper threshold
             L2gradient=True  # use more accurate L2 norm
         )
+        if(thresh_canny < 0.001):
+            break
+    cv2.waitKey(0)
+
     while np.sum(edge_image)/255 > MAX_EDGES_FRACTION * (raw_image_width * raw_image_height):
         thresh_canny *= 1.1
         edge_image = cv2.Canny(
@@ -111,7 +116,9 @@ def findLines(input_image_name:str):
             threshold1=thresh_canny,  # lower threshold
             threshold2=3*thresh_canny,  # upper threshold
             L2gradient=True  # use more accurate L2 norm
-    )
+        )
+        cv2.imshow("Test2", edge_image)
+    cv2.waitKey(0)
 
     cv2.imwrite("./test_images/detected_edges.jpg", edge_image)
 
@@ -127,7 +134,7 @@ def findLines(input_image_name:str):
     ).squeeze().reshape(-1, 2, 2) # squeeze to remove unneccesary extra dimensions in the list, then reshape to put each endpoint in it's own array
 
     # Merges all lines that are within a range of each other
-    SIMILARITY_THRESH = 3
+    SIMILARITY_THRESH = 5
     cleaned_lines = np.empty((0,2,2), np.int32)
     while 0 < len(houghLines):
         # Finds all lines that are similar to the current line and removes them from the list
@@ -165,15 +172,17 @@ def findLines(input_image_name:str):
             line_groups = np.vstack((line_groups, staff))
             staff_boxes = np.vstack((staff_boxes, cleaned_lines[staff[::4]].reshape(-1, 4, 2)))
             #Draw bounding box
-            lines_image = cv2.rectangle(img=lines_image, pt1=staff_boxes[-1][0], pt2=staff_boxes[-1][3], color=(0, 0, 255), thickness=4)
+            lines_image = cv2.rectangle(img=lines_image, pt1=staff_boxes[-1][0], pt2=staff_boxes[-1][3], color=(0, 0, 255), thickness=1)
 
     # sort the line array (staff lines) from top to bottom
     cleaned_lines_list = list(cleaned_lines)
     cleaned_lines_list = sorted(cleaned_lines_list, key=lines_sort_function)
 
     # Draw top/bottom lines
+    print("Line Count:", len(cleaned_lines_list))
     for line_count in range(len(cleaned_lines_list)):
         staff_line = int(line_count / 5)
+        cv2.line(lines_image, cleaned_lines_list[line_count][0], cleaned_lines_list[line_count][1], (255, 0, 0), thickness=1, lineType=cv2.LINE_AA)
         if(line_count % 5 == 0):
             cv2.line(lines_image, cleaned_lines_list[line_count][0], cleaned_lines_list[line_count][1], (255, 0, 0), thickness=2, lineType=cv2.LINE_AA)
             cv2.line(lines_image, cleaned_lines_list[line_count + 4][0], cleaned_lines_list[line_count + 4][1], (0, 255, 0), thickness=2, lineType=cv2.LINE_AA)
@@ -183,18 +192,17 @@ def findLines(input_image_name:str):
 
     return cleaned_lines_list, line_groups, staff_boxes
 
-def scale_template_images(top_line, bottom_line, template_images):
+def scale_template_images(top_line, bottom_line, template_image):
     # Input: the y position of the top line of any scale, the y position of the bottom line of the same scale,
     # and an array of note images to be used for template matching
     # Output: array of scaled template images to be actually used in template matching, ordered the same as before
-    scale_height = top_line - bottom_line
+    scale_height = bottom_line - top_line
     # we know from the size of the scale how big a note should be approximately - 1/4 of the scale's height
-    note_height = np.ceil(scale_height / 4)
-    scaled_images = []
-    for image in template_images:
-        width_height_ratio = len(image[0]) / len(image)
-        new_height = note_height * width_height_ratio
-        scaled_image = cv2.resize(image, (new_height, note_height), interpolation=cv2.INTER_LINEAR)
-        scaled_images.append(scaled_image)
+    note_height = np.round(scale_height / 3.2)
+    width_height_ratio = float(template_image.shape[1] / template_image.shape[0])
+    # width_height_ratio = len(template_image[0]) / len(template_image)
+    new_height = note_height * width_height_ratio
+    scaled_image = cv2.resize(template_image, [int(np.round(new_height)), int(np.round(note_height))], interpolation=cv2.INTER_LINEAR)
+    scaled_image = scaled_image
 
-    return scaled_images
+    return scaled_image

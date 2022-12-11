@@ -8,7 +8,10 @@ from playMusic import save_music
 #       adding the ability to detect in other images as a bonus if we get there, too much of what
 #       we're doing from the matching to the line detection depends on manually tuned parameters
 
-raw_image = cv2.imread("./images/5.jpg")
+filename = "./images/5.jpg"
+filename = "./images/8.png"
+
+raw_image = cv2.imread(filename)
 
 # NOTE: This is the code I used to extract the template images (from 5.jpg in the images directory)
 #       leaving it around just in case it's needed in the future
@@ -27,16 +30,26 @@ raw_image = cv2.imread("./images/5.jpg")
 # cv2.imshow("hlf template", hlf)
 # cv2.waitKey(0)
 
-quarter_note_template_img = cv2.imread("./template_images/qtr_template.jpg")
-half_note_template_img = cv2.imread("./template_images/hlf_template.jpg")
+lines_sorted, _, staff_boxes = interpretMusic.findLines(filename)
+
+for line_count in range(len(lines_sorted)):
+    staff_line = int(line_count / 5)
+    if(line_count % 5 == 0):
+        top_line = lines_sorted[line_count]
+        bottom_line = lines_sorted[line_count + 4]
+print(top_line[0][1])
+print(bottom_line[0][1])
+
+quarter_note_template_img = interpretMusic.scale_template_images(top_line[0][1], bottom_line[0][1], cv2.imread("./template_images/qtr_template.jpg"))
+half_note_template_img = interpretMusic.scale_template_images(top_line[0][1], bottom_line[0][1], cv2.imread("./template_images/hlf_template.jpg"))
 
 # compute the scores from the template matching
-qtr_scores = cv2.matchTemplate(raw_image, quarter_note_template_img, cv2.TM_CCOEFF_NORMED)
 hlf_scores = cv2.matchTemplate(raw_image, half_note_template_img, cv2.TM_CCOEFF_NORMED)
+qtr_scores = cv2.matchTemplate(raw_image, quarter_note_template_img, cv2.TM_CCOEFF_NORMED)
 
 # threshold said scores so that we get a 1 out any time there is an match in the image
 # (the specififc threshold value is tuned by hand for this specific application)
-low_thresh = 0.77
+low_thresh = 0.6
 _, qtr_thresholded_scores = cv2.threshold(qtr_scores,thresh=low_thresh,maxval=1.0,type=cv2.THRESH_BINARY)
 _, hlf_thresholded_scores = cv2.threshold(hlf_scores,thresh=low_thresh,maxval=1.0,type=cv2.THRESH_BINARY)
 
@@ -76,9 +89,6 @@ print(len(qtr_template_matches) + len(hlf_template_matches))
 #       determine horizontal order and pitch
 qtr_template_match_centroids = getTemplateMatchCentroids(qtr_template_matches, quarter_note_template_img)
 hlf_template_match_centroids = getTemplateMatchCentroids(hlf_template_matches, half_note_template_img)
-
-
-lines_sorted, _, staff_boxes = interpretMusic.findLines("./images/5.jpg")
 
 # NOTE VALUE RECOGNITION
 final_song = []
