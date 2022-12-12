@@ -8,7 +8,7 @@ from playMusic import save_music
 #       adding the ability to detect in other images as a bonus if we get there, too much of what
 #       we're doing from the matching to the line detection depends on manually tuned parameters
 
-filename = "./images/5.jpg"
+filename = "./images/input_image.jpg"
 
 raw_image = cv2.imread(filename)
 
