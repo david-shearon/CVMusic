@@ -94,7 +94,7 @@ def findLines(input_image_name:str):
         L2gradient=True  # use more accurate L2 norm
     )
 
-    print("Test1")
+    # print("Test1")
     while np.sum(edge_image)/255 < MIN_EDGES_FRACTION * (raw_image_width * raw_image_height):
         thresh_canny *= 0.9
         edge_image = cv2.Canny(
@@ -179,7 +179,7 @@ def findLines(input_image_name:str):
     cleaned_lines_list = sorted(cleaned_lines_list, key=lines_sort_function)
 
     # Draw top/bottom lines
-    print("Line Count:", len(cleaned_lines_list))
+    # print("Line Count:", len(cleaned_lines_list))
     for line_count in range(len(cleaned_lines_list)):
         staff_line = int(line_count / 5)
         cv2.line(lines_image, cleaned_lines_list[line_count][0], cleaned_lines_list[line_count][1], (255, 0, 0), thickness=1, lineType=cv2.LINE_AA)
