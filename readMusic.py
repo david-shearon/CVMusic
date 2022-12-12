@@ -49,7 +49,7 @@ qtr_scores = cv2.matchTemplate(raw_image, quarter_note_template_img, cv2.TM_CCOE
 
 # threshold said scores so that we get a 1 out any time there is an match in the image
 # (the specififc threshold value is tuned by hand for this specific application)
-qtr_thresh = 0.75
+qtr_thresh = 0.8
 hlf_thresh = 0.6
 _, qtr_thresholded_scores = cv2.threshold(qtr_scores,thresh=qtr_thresh,maxval=1.0,type=cv2.THRESH_BINARY)
 _, hlf_thresholded_scores = cv2.threshold(hlf_scores,thresh=hlf_thresh,maxval=1.0,type=cv2.THRESH_BINARY)
